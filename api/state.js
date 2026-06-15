@@ -37,20 +37,10 @@ module.exports = async (req, res) => {
   const dayReset = (process.env.DASH_DAY_RESET || "local").toLowerCase();
   const { owner, repo, branch } = cfg();
 
-  if (!process.env.GITHUB_TOKEN) {
-    res.statusCode = 200;
-    return res.json({
-      error_soft: "GITHUB_TOKEN not set — cannot read the private repo yet.",
-      tz, day_reset: dayReset, cloud: true,
-      project: { name: repo, root: `${owner}/${repo}`, branch, git: false },
-      badge: "UNKNOWN",
-      hero: { percent: null, buckets: { done: 0, in_progress: 0, not_started: 0, total: 0 },
-              summary: "Set GITHUB_TOKEN in Vercel to read your project.", has_tasks: false },
-      phases_left: [], phases_done: [], today: { count: 0, items: [] },
-      right_now: { text: "Not available in the cloud version." },
-      commits: [], hygiene: null,
-    });
-  }
+  // A public repo can be read without a token, but GitHub limits unauthenticated
+  // requests to 60/hour — so we detect that and recommend setting a token.
+  const hasToken = !!process.env.GITHUB_TOKEN;
+  let rateLimited = false, readError = null;
 
   // Tasks (with last-good fallback on a transient parse/read failure).
   let taskData = LAST_GOOD_TASKS;
@@ -62,12 +52,21 @@ module.exports = async (req, res) => {
     } else {
       taskData = null; // file genuinely absent
     }
-  } catch (_) { /* keep LAST_GOOD_TASKS */ }
+  } catch (e) { if (e.rateLimited) rateLimited = true; readError = e; }
 
   let reviews = [], commits = [], name = repo;
-  try { reviews = await fetchReviewDocs(); } catch (_) {}
-  try { commits = await fetchCommits(20, 10); } catch (_) {}
+  try { reviews = await fetchReviewDocs(); } catch (e) { if (e.rateLimited) rateLimited = true; }
+  // Per-commit file counts cost extra API calls; skip them when unauthenticated.
+  try { commits = await fetchCommits(20, hasToken ? 10 : 0); } catch (e) { if (e.rateLimited) rateLimited = true; readError = e; }
   try { name = await fetchProjectName(repo); } catch (_) {}
+
+  let errorSoft = null;
+  if (rateLimited) {
+    errorSoft = "GitHub's hourly limit for un-authenticated requests was reached. " +
+      "Add a GITHUB_TOKEN in Vercel (Settings → Environment Variables) for a much higher limit.";
+  } else if (readError && !taskData && !commits.length) {
+    errorSoft = "Couldn't read the project from GitHub: " + readError.message;
+  }
 
   const phases = buildPhases(taskData, reviews);
 
@@ -82,6 +81,7 @@ module.exports = async (req, res) => {
   return res.json({
     generated_iso_utc: new Date().toISOString(),
     tz, day_reset: dayReset, cloud: true,
+    error_soft: errorSoft,
     project: { name, root: `${owner}/${repo}`, branch, git: true },
     badge,
     hero: {

@@ -28,27 +28,30 @@ completion %, phases, what's done, today's work, and recent commits.
 
 | Variable | Required | What to put |
 |----------|----------|-------------|
-| `GITHUB_TOKEN` | ✅ | A GitHub **fine-grained personal access token** with **read-only** access to `nikola-cve/Project-dashboard` (Repository permissions → **Contents: Read-only**). Needed because the repo is private. |
 | `DASH_PASSWORD` | ✅ | The password you'll type on the login page. Choose anything. |
 | `DASH_SECRET` | ✅ | A random string used to sign the login cookie. Use the value Claude gave you in chat (or any long random string). |
+| `GITHUB_TOKEN` | strongly recommended | A GitHub personal access token. The repo is **public**, so a token isn't strictly required to read it — but GitHub limits **un-authenticated** requests to **60/hour**, which the dashboard burns through quickly. A token raises that to **5,000/hour**. For a public repo the token needs **no special permissions** (a classic token with no scopes ticked, or a fine-grained token with public read, is enough). |
 | `GH_OWNER` | optional | Defaults to `nikola-cve`. |
 | `GH_REPO` | optional | Defaults to `Project-dashboard`. |
 | `GH_BRANCH` | optional | Defaults to `main`. Set to your working branch if you want to track that instead. |
 | `DASH_TZ` | optional | Defaults to `Europe/Belgrade`. |
 | `DASH_DAY_RESET` | optional | `local` (default) or `utc`. |
 
+> Without a token the dashboard still works, but after ~60 requests in an hour
+> it will show a "rate limit reached" notice until the hour resets. Add the
+> token to avoid that.
+
 ## Set it up from your phone
 
-1. **Create the GitHub token** (one time):
+1. **Create a GitHub token** (recommended, one time — for higher rate limits):
    - github.com → your avatar → **Settings** → **Developer settings** →
-     **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
-   - Resource owner: your account. Repository access: **Only select repositories**
-     → pick **Project-dashboard**.
-   - Permissions → Repository permissions → **Contents: Read-only**.
-   - Generate, then **copy the token** (`github_pat_...`).
+     **Personal access tokens** → **Tokens (classic)** → **Generate new token**.
+   - Since the repo is public, you can leave **all scopes unticked** — that's
+     enough to read public data at 5,000 requests/hour.
+   - Generate, then **copy the token** (`ghp_...`).
 2. **Add the env vars in Vercel:**
    - Open your project on vercel.com → **Settings** → **Environment Variables**.
-   - Add `GITHUB_TOKEN`, `DASH_PASSWORD`, `DASH_SECRET` (paste the values).
+   - Add `DASH_PASSWORD`, `DASH_SECRET`, and `GITHUB_TOKEN` (paste the values).
    - Apply to **Production** (and Preview if you like).
 3. **Redeploy** so the new env vars take effect:
    - Vercel → **Deployments** → latest → **⋯** → **Redeploy**.
@@ -59,8 +62,8 @@ completion %, phases, what's done, today's work, and recent commits.
 
 - The login cookie is HttpOnly + Secure + signed; only someone with your
   password can read the dashboard.
-- The GitHub token is read-only and scoped to this one repo. It lives only as a
-  Vercel secret — it is **never** committed to the repo.
+- The GitHub token (if used) only reads public data and carries no scopes. It
+  lives only as a Vercel secret — it is **never** committed to the repo.
 - No analytics or telemetry. The only outbound request the page makes (besides
   to its own API) is loading the one course thumbnail image.
 - `.vercelignore` ensures `TASKS.md` and the markdown docs are not served as
