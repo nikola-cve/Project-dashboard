@@ -1,19 +1,17 @@
-// GET /api/state — the live project state for the cloud dashboard.
+// GET /api/state[?project=N] — the live project state for the cloud dashboard.
 // Requires a valid auth cookie. Reads everything from GitHub at request time
-// (no caching). Sections that only exist on a local working copy ("right now",
-// uncommitted changes) are reported as unavailable in the cloud — never faked.
+// (no caching). Live-only sections ("right now", uncommitted) are reported as
+// unavailable in the cloud — never faked.
 
 const { isAuthed } = require("../lib/auth");
-const { cfg, fetchFileRaw, fetchCommits, fetchReviewDocs, fetchProjectName } = require("../lib/github");
+const gh = require("../lib/github");
 const { parseTasks, buildPhases } = require("../lib/tasks");
 
-let LAST_GOOD_TASKS = null; // tolerate a mid-write TASKS.md read between deploys
+let LAST_GOOD_TASKS = {}; // per-project last-good snapshot, keyed by "owner/repo"
 
 function localDayStartEpoch(tz, reset) {
   const now = new Date();
-  if (reset === "utc") {
-    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000;
-  }
+  if (reset === "utc") return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000;
   const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone: tz, hour12: false,
     year: "numeric", month: "2-digit", day: "2-digit",
@@ -23,42 +21,33 @@ function localDayStartEpoch(tz, reset) {
   const hour = p.hour === "24" ? 0 : parseInt(p.hour, 10);
   const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, hour, +p.minute, +p.second);
   const offsetMs = asUTC - now.getTime();
-  const midnightUTC = Date.UTC(+p.year, +p.month - 1, +p.day) - offsetMs;
-  return Math.floor(midnightUTC / 1000);
+  return Math.floor((Date.UTC(+p.year, +p.month - 1, +p.day) - offsetMs) / 1000);
 }
 
 module.exports = async (req, res) => {
-  if (!isAuthed(req)) {
-    res.statusCode = 401;
-    return res.json({ error: "unauthorized" });
-  }
+  if (!isAuthed(req)) { res.statusCode = 401; return res.json({ error: "unauthorized" }); }
 
   const tz = process.env.DASH_TZ || "Europe/Belgrade";
   const dayReset = (process.env.DASH_DAY_RESET || "local").toLowerCase();
-  const { owner, repo, branch } = cfg();
-
-  // A public repo can be read without a token, but GitHub limits unauthenticated
-  // requests to 60/hour — so we detect that and recommend setting a token.
-  const hasToken = !!process.env.GITHUB_TOKEN;
+  const projIndex = (req.query && req.query.project) || 0;
+  const ctx = gh.cfg(projIndex);
+  const key = `${ctx.owner}/${ctx.repo}`;
+  const hasToken = !!ctx.token;
   let rateLimited = false, readError = null;
 
-  // Tasks (with last-good fallback on a transient parse/read failure).
-  let taskData = LAST_GOOD_TASKS;
+  // Tasks (last-good fallback per project on a transient read/parse failure).
+  let taskData = LAST_GOOD_TASKS[key] || null;
   try {
-    const text = await fetchFileRaw("TASKS.md");
-    if (text != null) {
-      taskData = parseTasks(text);
-      LAST_GOOD_TASKS = taskData;
-    } else {
-      taskData = null; // file genuinely absent
-    }
+    const text = await gh.fetchFileRaw(ctx, "TASKS.md");
+    if (text != null) { taskData = parseTasks(text); LAST_GOOD_TASKS[key] = taskData; }
+    else taskData = null;
   } catch (e) { if (e.rateLimited) rateLimited = true; readError = e; }
 
-  let reviews = [], commits = [], name = repo;
-  try { reviews = await fetchReviewDocs(); } catch (e) { if (e.rateLimited) rateLimited = true; }
-  // Per-commit file counts cost extra API calls; skip them when unauthenticated.
-  try { commits = await fetchCommits(20, hasToken ? 10 : 0); } catch (e) { if (e.rateLimited) rateLimited = true; readError = e; }
-  try { name = await fetchProjectName(repo); } catch (_) {}
+  let reviews = [], commits = [], name = ctx.repo, prs = [];
+  try { reviews = await gh.fetchReviewDocs(ctx); } catch (e) { if (e.rateLimited) rateLimited = true; }
+  try { commits = await gh.fetchCommits(ctx, 20, hasToken ? 10 : 0); } catch (e) { if (e.rateLimited) rateLimited = true; readError = e; }
+  try { name = await gh.fetchProjectName(ctx, ctx.repo); } catch (_) {}
+  try { prs = await gh.fetchOpenPRs(ctx); } catch (_) {}
 
   let errorSoft = null;
   if (rateLimited) {
@@ -69,12 +58,9 @@ module.exports = async (req, res) => {
   }
 
   const phases = buildPhases(taskData, reviews);
-
-  // Today's completed work, by local-midnight boundary.
   const cutoff = localDayStartEpoch(tz, dayReset);
   const todays = commits.filter(c => c.epoch != null && c.epoch >= cutoff);
-
-  const badge = commits.length || phases.available ? "IDLE" : "UNKNOWN";
+  const badge = (commits.length || phases.available) ? "IDLE" : "UNKNOWN";
 
   res.statusCode = 200;
   res.setHeader("Cache-Control", "no-store");
@@ -82,26 +68,21 @@ module.exports = async (req, res) => {
     generated_iso_utc: new Date().toISOString(),
     tz, day_reset: dayReset, cloud: true,
     error_soft: errorSoft,
-    project: { name, root: `${owner}/${repo}`, branch, git: true },
+    projects: ctx.projectList,
+    project_index: ctx.index,
+    project: { name, root: key, branch: ctx.branch, git: true, writable: hasToken },
     badge,
-    hero: {
-      percent: phases.overall_percent,
-      buckets: phases.buckets,
-      summary: phases.summary,
-      has_tasks: phases.available,
-    },
+    hero: { percent: phases.overall_percent, buckets: phases.buckets, summary: phases.summary, has_tasks: phases.available },
     phases_left: phases.left,
     phases_done: phases.done,
+    board: { tasks: phases.tasks || [], next_phase_id: phases.next_phase_id || null },
+    prs,
     today: {
       count: todays.length,
       items: todays.map(c => ({ message: c.message, iso_utc: c.iso_utc, short: c.short, file_count: c.file_count })),
     },
-    right_now: {
-      text: "Live activity isn't visible in the cloud version — it only exists on the machine where you edit. State here updates from GitHub.",
-    },
-    commits: commits.slice(0, 10).map(c => ({
-      message: c.message, iso_utc: c.iso_utc, short: c.short, file_count: c.file_count,
-    })),
+    right_now: { text: "Live activity isn't visible in the cloud version — it only exists on the machine where you edit. State here updates from GitHub." },
+    commits: commits.slice(0, 10).map(c => ({ message: c.message, iso_utc: c.iso_utc, short: c.short, file_count: c.file_count })),
     last_commit_iso: commits.length ? commits[0].iso_utc : null,
     hygiene: null,
   });

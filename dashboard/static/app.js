@@ -7,6 +7,9 @@
 
 const POLL_MS = 2000;
 let TZ = "UTC";
+let boardBusy = false;
+let lastState = null;
+const COLS = ["not-started", "in-progress", "done"];
 
 /* ---------- helpers ---------- */
 
@@ -71,6 +74,109 @@ function renderHeader(s) {
   badge.className = "badge badge--" + b.toLowerCase();
 
   $("last-refresh").textContent = "Last updated " + fmtTimeShort(s.generated_iso_utc);
+  const fl = $("footer-line");
+  if (fl) fl.textContent = "Project Dashboard · updated " + fmtTimeShort(s.generated_iso_utc);
+}
+
+/* ---------- board (interactive Kanban) ---------- */
+
+function taskCard(t) {
+  const c = el("div", "task-card" + (t.in_next_phase && t.column !== "done" ? " is-next" : ""));
+  c.dataset.id = t.id; c.dataset.col = t.column;
+  c.appendChild(el("div", "tc-title", t.title));
+  const meta = el("div", "tc-meta");
+  meta.appendChild(el("span", null, "Phase " + t.phase_id));
+  if (t.in_next_phase && t.column !== "done") meta.appendChild(el("span", "tc-next", "next"));
+  c.appendChild(meta);
+  attachDrag(c);
+  return c;
+}
+
+function renderBoard(s) {
+  if (boardBusy) return;
+  const tasks = (s.board && s.board.tasks) || [];
+  const empty = $("board-empty");
+  if (empty) empty.hidden = tasks.length > 0;
+  COLS.forEach(col => {
+    const drop = document.querySelector(`.board-drop[data-col="${col}"]`);
+    if (!drop) return;
+    drop.innerHTML = "";
+    const items = tasks.filter(t => t.column === col);
+    items.forEach(t => drop.appendChild(taskCard(t)));
+    const cnt = $("count-" + col); if (cnt) cnt.textContent = items.length;
+  });
+}
+
+function boardMsg(text, kind) {
+  const m = $("board-msg"); if (!m) return;
+  if (!text) { m.hidden = true; return; }
+  m.hidden = false; m.textContent = text; m.className = "board-msg " + (kind || "");
+}
+
+function refreshCounts() {
+  COLS.forEach(col => { const c = $("count-" + col); if (c) c.textContent = document.querySelectorAll(`.board-drop[data-col="${col}"] .task-card`).length; });
+}
+
+let drag = null;
+function attachDrag(card) {
+  card.addEventListener("pointerdown", (e) => {
+    if (e.button != null && e.button !== 0) return;
+    const startX = e.clientX, startY = e.clientY;
+    let started = false, ghost = null;
+    function onMove(ev) {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (!started && Math.hypot(dx, dy) < 6) return;
+      if (!started) {
+        started = true; boardBusy = true; card.classList.add("dragging");
+        ghost = card.cloneNode(true);
+        Object.assign(ghost.style, { position: "fixed", pointerEvents: "none", width: card.offsetWidth + "px", zIndex: 1000, opacity: ".9", margin: 0 });
+        document.body.appendChild(ghost);
+        drag = { id: card.dataset.id, from: card.dataset.col };
+      }
+      ghost.style.left = (ev.clientX - 20) + "px"; ghost.style.top = (ev.clientY - 16) + "px";
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      const drop = under && under.closest(".board-drop");
+      document.querySelectorAll(".board-drop").forEach(d => d.classList.toggle("drag-over", d === drop));
+    }
+    function onUp(ev) {
+      card.removeEventListener("pointermove", onMove);
+      card.removeEventListener("pointerup", onUp);
+      card.removeEventListener("pointercancel", onUp);
+      card.classList.remove("dragging");
+      if (ghost) ghost.remove();
+      let target = null;
+      if (started) {
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        const drop = under && under.closest(".board-drop");
+        if (drop) target = drop.dataset.col;
+      }
+      document.querySelectorAll(".board-drop").forEach(d => d.classList.remove("drag-over"));
+      if (started && target && target !== drag.from) moveTask(drag.id, target);
+      else boardBusy = false;
+      drag = null;
+    }
+    card.setPointerCapture?.(e.pointerId);
+    card.addEventListener("pointermove", onMove);
+    card.addEventListener("pointerup", onUp);
+    card.addEventListener("pointercancel", onUp);
+  });
+}
+
+async function moveTask(id, status) {
+  const card = document.querySelector(`.task-card[data-id="${CSS.escape(id)}"]`);
+  const target = document.querySelector(`.board-drop[data-col="${status}"]`);
+  if (card && target) { card.dataset.col = status; card.classList.remove("is-next"); target.appendChild(card); refreshCounts(); }
+  boardMsg("Saving…", "");
+  try {
+    const res = await fetch("/api/task-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "save failed");
+    boardMsg("Saved ✓ — TASKS.md updated.", "ok");
+    setTimeout(() => boardMsg(""), 2500);
+  } catch (e) {
+    boardMsg("Couldn't save: " + e.message, "err");
+    if (lastState) renderBoard(lastState);
+  } finally { boardBusy = false; }
 }
 
 function renderHero(s) {
@@ -272,9 +378,11 @@ async function tick() {
     if (!res.ok) throw new Error("bad status " + res.status);
     const s = await res.json();
     if (s.error) throw new Error(s.error);
+    lastState = s;
     TZ = s.tz || "UTC";
     renderHeader(s);
     renderHero(s);
+    renderBoard(s);
     renderLeft(s);
     renderDone(s);
     renderToday(s);

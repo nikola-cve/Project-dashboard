@@ -5,10 +5,13 @@ your project state from **GitHub** at request time, and is protected by a
 **login page**. Use it to check your project from your phone — no computer or
 server of your own required.
 
-The local Python dashboard in `dashboard/` is unchanged and still the fuller
-view (it also shows live "right now" activity and uncommitted changes, which a
-cloud app cannot see). This cloud version shows everything that lives on GitHub:
-completion %, phases, what's done, today's work, and recent commits.
+This cloud version shows everything that lives on GitHub: completion %, phases,
+an **interactive Kanban board** (drag a card to change a task's status — it
+commits the change to `TASKS.md`), a **burndown / progress-over-time** chart,
+**open pull requests with CI status**, today's work, recent commits, and an
+optional **multi-project switcher**. The local Python dashboard in `dashboard/`
+additionally shows live "right now" activity and uncommitted changes, which a
+cloud app cannot see.
 
 ## What's in this deployment
 
@@ -16,7 +19,9 @@ completion %, phases, what's done, today's work, and recent commits.
 |------|---------|
 | `api/login.js` | Checks your password, sets a signed login cookie. |
 | `api/logout.js` | Clears the login cookie. |
-| `api/state.js` | Auth-gated. Reads GitHub and returns the project state JSON. |
+| `api/state.js` | Auth-gated. Reads GitHub and returns the project state JSON (incl. board tasks + open PRs). |
+| `api/task-move.js` | Auth-gated. The board's write action: commits a task-status change to `TASKS.md`. |
+| `api/history.js` | Auth-gated. Returns the completion-%-over-time series for the burndown chart. |
 | `lib/tasks.js` | Parses `TASKS.md` and computes the completion view (JS port of the local server). |
 | `lib/github.js` | Reads `TASKS.md`, commits, and review docs from the GitHub API. |
 | `lib/auth.js` | Signed-cookie login (Node crypto, no dependencies). |
@@ -30,24 +35,26 @@ completion %, phases, what's done, today's work, and recent commits.
 |----------|----------|-------------|
 | `DASH_PASSWORD` | ✅ | The password you'll type on the login page. Choose anything. |
 | `DASH_SECRET` | ✅ | A random string used to sign the login cookie. Use the value Claude gave you in chat (or any long random string). |
-| `GITHUB_TOKEN` | strongly recommended | A GitHub personal access token. The repo is **public**, so a token isn't strictly required to read it — but GitHub limits **un-authenticated** requests to **60/hour**, which the dashboard burns through quickly. A token raises that to **5,000/hour**. For a public repo the token needs **no special permissions** (a classic token with no scopes ticked, or a fine-grained token with public read, is enough). |
+| `GITHUB_TOKEN` | required for the board | A GitHub personal access token. Two things depend on it: (1) **rate limits** — un-authenticated reads are capped at 60/hour, a token raises that to 5,000/hour; (2) the **interactive Kanban** — dragging a card commits a change to `TASKS.md`, which needs **write** access. Use a classic token with the **`public_repo`** scope (or a fine-grained token with **Contents: read & write** on this repo). Without a write-scoped token the board is read-only and everything else still works. |
+| `DASH_PROJECTS` | optional | JSON array to monitor several repos with a project switcher, e.g. `[{"owner":"nikola-cve","repo":"Project-dashboard","branch":"main","label":"Dashboard"},{"owner":"nikola-cve","repo":"other","branch":"main","label":"Other"}]`. Unset = the single repo below. |
 | `GH_OWNER` | optional | Defaults to `nikola-cve`. |
 | `GH_REPO` | optional | Defaults to `Project-dashboard`. |
 | `GH_BRANCH` | optional | Defaults to `main`. Set to your working branch if you want to track that instead. |
 | `DASH_TZ` | optional | Defaults to `Europe/Belgrade`. |
 | `DASH_DAY_RESET` | optional | `local` (default) or `utc`. |
 
-> Without a token the dashboard still works, but after ~60 requests in an hour
-> it will show a "rate limit reached" notice until the hour resets. Add the
-> token to avoid that.
+> Without a token the dashboard still reads the repo, but after ~60 requests in
+> an hour it shows a "rate limit reached" notice, and the board can't save moves.
+> Add a write-scoped token to get both higher limits and the drag-drop board.
 
 ## Set it up from your phone
 
-1. **Create a GitHub token** (recommended, one time — for higher rate limits):
+1. **Create a GitHub token** (one time — for higher rate limits AND the board):
    - github.com → your avatar → **Settings** → **Developer settings** →
      **Personal access tokens** → **Tokens (classic)** → **Generate new token**.
-   - Since the repo is public, you can leave **all scopes unticked** — that's
-     enough to read public data at 5,000 requests/hour.
+   - Tick the **`public_repo`** scope (this lets the drag-drop board commit task
+     changes to `TASKS.md`). If you'd rather keep it read-only, leave all scopes
+     unticked — the board will then be view-only.
    - Generate, then **copy the token** (`ghp_...`).
 2. **Add the env vars in Vercel:**
    - Open your project on vercel.com → **Settings** → **Environment Variables**.
@@ -62,8 +69,10 @@ completion %, phases, what's done, today's work, and recent commits.
 
 - The login cookie is HttpOnly + Secure + signed; only someone with your
   password can read the dashboard.
-- The GitHub token (if used) only reads public data and carries no scopes. It
-  lives only as a Vercel secret — it is **never** committed to the repo.
+- The GitHub token lives only as a Vercel secret — it is **never** committed to
+  the repo. The only write the dashboard ever makes is a task-status change
+  committed to `TASKS.md` (commit message `chore(board): move …`); it never
+  deletes or touches anything else.
 - No analytics or telemetry. The only outbound request the page makes (besides
   to its own API) is loading the one course thumbnail image.
 - `.vercelignore` ensures `TASKS.md` and the markdown docs are not served as

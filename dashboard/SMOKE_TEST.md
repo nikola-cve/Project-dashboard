@@ -36,12 +36,11 @@ python3 dashboard/server.py
       file count. Commit id appears only on hover.
 - [ ] **Not yet saved (right)**: lists your actual uncommitted changes grouped
       by directory, with commit-hygiene suggestions specific to that diff.
-- [ ] **Ad block** renders the Obsidian course thumbnail and **all three links**
-      — the "Don't Sleep On AI.com" header text, the image, and the
-      "Install your Second Brain now →" button — each open the course page in a
-      new tab with the full UTM string in the URL.
-- [ ] **Footer** line's "Don't Sleep On AI.com" link opens the same course URL
-      (with UTM params) in a new tab.
+- [ ] **Board** shows your tasks in three columns (Not started / In progress /
+      Done) with the right counts. Drag a card to another column → the `TASKS.md`
+      row's status updates on disk, the hero % recomputes within a refresh, and
+      "Saved ✓" appears. Moving to Done stamps today's date.
+- [ ] **Footer** shows a neutral "Project Dashboard · updated …" line (no ad).
 
 ## Resilience checks
 

@@ -270,39 +270,31 @@ main {
   color: var(--text-dim);
 }
 
-/* ---------- Don't Sleep On AI ad ---------- */
-.dsoa-ad {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1.25rem 1.5rem;
+/* ---------- Kanban board ---------- */
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.card-head h2 { margin: 0; }
+.card-hint { font-size: .78rem; color: var(--text-dim); }
+.board-msg { font-size: .82rem; margin: .6rem 0 0; }
+.board-msg.err { color: #b3261e; }
+.board-msg.ok { color: #1e5e3a; }
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; }
+.board-col { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: .6rem; min-height: 80px; }
+.board-col-title { font-size: .82rem; margin: 0 0 .55rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+.col-count { background: #eef0f3; border-radius: 999px; padding: 0 .45rem; font-size: .72rem; }
+.board-drop { display: flex; flex-direction: column; gap: .5rem; min-height: 40px; border-radius: 8px; transition: background .15s; }
+.board-drop.drag-over { background: var(--blue-soft); outline: 2px dashed var(--blue); outline-offset: 2px; }
+.task-card {
+  background: var(--card-bg); border: 1px solid var(--border); border-left: 3px solid var(--todo);
+  border-radius: 8px; padding: .5rem .6rem; box-shadow: var(--shadow); cursor: grab; touch-action: none;
 }
-.dsoa-ad__header { margin: 0 0 .9rem; font-size: .85rem; color: var(--text-dim); }
-.dsoa-ad__card {
-  display: grid;
-  grid-template-columns: 30% 1fr;
-  gap: 1.25rem;
-  align-items: center;
-}
-.dsoa-ad__image-link img {
-  width: 100%;
-  height: auto;
-  border-radius: 10px;
-  display: block;
-}
-.dsoa-ad__body h3 { margin: 0 0 .4rem; font-size: 1.15rem; }
-.dsoa-ad__body p { margin: 0 0 .9rem; color: var(--text-dim); }
-.dsoa-ad__cta {
-  display: inline-block;
-  background: var(--green);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 700;
-  padding: .6rem 1.1rem;
-  border-radius: 10px;
-}
-.dsoa-ad__cta:hover { background: #266a42; }
+.task-card:active { cursor: grabbing; }
+.task-card.dragging { opacity: .5; }
+.task-card[data-col="in-progress"] { border-left-color: var(--blue); }
+.task-card[data-col="done"] { border-left-color: var(--green); }
+.task-card .tc-title { font-size: .85rem; font-weight: 600; }
+.task-card .tc-meta { font-size: .7rem; color: var(--text-dim); margin-top: .25rem; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.task-card.is-next { box-shadow: 0 0 0 2px var(--pink-soft); }
+.tc-next { font-size: .62rem; font-weight: 700; color: var(--pink); background: var(--pink-soft); border: 1px solid #f0c4d6; border-radius: 999px; padding: 0 .4rem; }
 
 /* ---------- Footer ---------- */
 .site-footer {
@@ -315,8 +307,7 @@ main {
 
 /* ---------- Focus visibility (keyboard nav) ---------- */
 a:focus-visible,
-button:focus-visible,
-.dsoa-ad__cta:focus-visible {
+button:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
@@ -324,5 +315,5 @@ button:focus-visible,
 @media (max-width: 720px) {
   .hero { grid-template-columns: 1fr; }
   .commits-grid { grid-template-columns: 1fr; }
-  .dsoa-ad__card { grid-template-columns: 1fr; }
+  .board { grid-template-columns: 1fr; }
 }

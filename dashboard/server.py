@@ -418,6 +418,8 @@ def build_phases(task_data: dict | None, reviews: list[str]) -> dict:
             "buckets": {"done": 0, "in_progress": 0, "not_started": 0, "total": 0},
             "left": [],
             "done": [],
+            "tasks": [],
+            "next_phase_id": None,
             "summary": "No task file yet — add a TASKS.md to track progress.",
         }
 
@@ -474,6 +476,22 @@ def build_phases(task_data: dict | None, reviews: list[str]) -> dict:
     # Done phases newest first by completion date when available.
     done_phases.sort(key=lambda v: v["completed_on"] or "", reverse=True)
 
+    # Flat task list for the Kanban board.
+    tasks = []
+    for p in phases:
+        for t in p["tasks"]:
+            if t["status"] == "done":
+                col = "done"
+            elif t["status"] in ("in-progress", "blocked"):
+                col = "in-progress"
+            else:
+                col = "not-started"
+            tasks.append({
+                "id": t["id"], "title": t["title"], "status": t["status"],
+                "column": col, "phase_id": p["id"], "phase_name": p["name"],
+                "in_next_phase": p["id"] == next_id,
+            })
+
     # Plain-English overall summary.
     summary = _overall_summary(totals)
 
@@ -488,6 +506,8 @@ def build_phases(task_data: dict | None, reviews: list[str]) -> dict:
         },
         "left": left,
         "done": done_phases,
+        "tasks": tasks,
+        "next_phase_id": next_id,
         "summary": summary,
     }
 
@@ -761,6 +781,7 @@ def build_state() -> dict:
             "root": str(PROJECT_ROOT),
             "branch": branch,
             "git": git_ok,
+            "writable": (PROJECT_ROOT / "TASKS.md").exists(),
         },
         "badge": badge,
         "hero": {
@@ -771,6 +792,7 @@ def build_state() -> dict:
         },
         "phases_left": phases["left"],
         "phases_done": phases["done"],
+        "board": {"tasks": phases.get("tasks", []), "next_phase_id": phases.get("next_phase_id")},
         "today": today,
         "right_now": right_now,
         "commits": [
@@ -784,6 +806,55 @@ def build_state() -> dict:
         ],
         "hygiene": hygiene,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Task status write-back (the only mutating action)
+# --------------------------------------------------------------------------- #
+
+def _today_local() -> str:
+    return datetime.now(timezone.utc).astimezone(_tz()).strftime("%Y-%m-%d")
+
+
+def set_task_status(text: str, task_id: str, status: str, today: str) -> str:
+    """Rewrite one task's status (and done_on) in TASKS.md text. Raises if the
+    id isn't found. Only the matched row changes."""
+    if status not in ("done", "in-progress", "not-started"):
+        raise ValueError("invalid status")
+    lines = text.split("\n")
+    changed = False
+    for i, line in enumerate(lines):
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        if cells[0].lower() == "id":
+            continue
+        if all(set(c) <= {"-", ":"} for c in cells if c):
+            continue
+        if cells[0] != str(task_id):
+            continue
+        while len(cells) < 7:
+            cells.append("")
+        cells[3] = status
+        cells[5] = (cells[5] or today) if status == "done" else ""
+        lines[i] = "| " + " | ".join(cells) + " |"
+        changed = True
+        break
+    if not changed:
+        raise ValueError("task id not found: %s" % task_id)
+    return "\n".join(lines)
+
+
+def write_task_status(task_id: str, status: str) -> None:
+    """Read TASKS.md, apply the status change, and write it back atomically."""
+    path = PROJECT_ROOT / "TASKS.md"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    updated = set_task_status(text, task_id, status, _today_local())
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(updated, encoding="utf-8")
+    os.replace(tmp, path)
 
 
 # --------------------------------------------------------------------------- #
@@ -847,6 +918,41 @@ class Handler(BaseHTTPRequestHandler):
             self._send_bytes(target.read_bytes(), ctype)
         except Exception:
             self._send_bytes(b"read error", "text/plain; charset=utf-8", code=500)
+
+    def do_POST(self):  # noqa: N802
+        path = self.path.split("?", 1)[0]
+        if path != "/api/task-status":
+            self._send_bytes(b"not found", "text/plain; charset=utf-8", code=404)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            self._send_bytes(json.dumps({"error": "bad request"}).encode(),
+                             _CONTENT_TYPES[".json"], code=400)
+            return
+
+        task_id = str(payload.get("id", "")).strip()
+        status = str(payload.get("status", "")).strip()
+        if not task_id or status not in ("done", "in-progress", "not-started"):
+            self._send_bytes(json.dumps({"error": "Provide a task id and a valid status."}).encode(),
+                             _CONTENT_TYPES[".json"], code=400)
+            return
+        if not (PROJECT_ROOT / "TASKS.md").exists():
+            self._send_bytes(json.dumps({"error": "No TASKS.md to update."}).encode(),
+                             _CONTENT_TYPES[".json"], code=400)
+            return
+        try:
+            write_task_status(task_id, status)
+        except ValueError as exc:
+            self._send_bytes(json.dumps({"error": str(exc)}).encode(),
+                             _CONTENT_TYPES[".json"], code=404)
+            return
+        except Exception as exc:
+            self._send_bytes(json.dumps({"error": str(exc)}).encode(),
+                             _CONTENT_TYPES[".json"], code=500)
+            return
+        self._send_bytes(json.dumps({"ok": True}).encode(), _CONTENT_TYPES[".json"])
 
     def log_message(self, *args):  # keep the console quiet
         pass

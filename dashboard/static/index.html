@@ -49,6 +49,30 @@
       </div>
     </section>
 
+    <!-- Board (interactive Kanban) -->
+    <section class="card" aria-labelledby="board-h">
+      <div class="card-head">
+        <h2 id="board-h">Board</h2>
+        <span class="card-hint" id="board-hint">Drag a card to change its status.</span>
+      </div>
+      <div id="board" class="board" aria-live="polite">
+        <div class="board-col" data-col="not-started">
+          <h3 class="board-col-title">Not started <span class="col-count" id="count-not-started">0</span></h3>
+          <div class="board-drop" data-col="not-started"></div>
+        </div>
+        <div class="board-col" data-col="in-progress">
+          <h3 class="board-col-title">In progress <span class="col-count" id="count-in-progress">0</span></h3>
+          <div class="board-drop" data-col="in-progress"></div>
+        </div>
+        <div class="board-col" data-col="done">
+          <h3 class="board-col-title">Done <span class="col-count" id="count-done">0</span></h3>
+          <div class="board-drop" data-col="done"></div>
+        </div>
+      </div>
+      <p id="board-empty" class="empty" hidden>No tasks yet — add a TASKS.md.</p>
+      <p id="board-msg" class="board-msg" hidden></p>
+    </section>
+
     <!-- 3. What's left -->
     <section class="card" aria-labelledby="left-h">
       <h2 id="left-h">What's left to do</h2>
@@ -97,36 +121,11 @@
       </div>
     </section>
 
-    <!-- 8. Don't Sleep On AI ad block -->
-    <section class="dsoa-ad" aria-label="Don't Sleep On AI">
-      <p class="dsoa-ad__header">
-        This dashboard built by
-        <a href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
-           target="_blank" rel="noopener noreferrer">Don't Sleep On AI.com</a>
-      </p>
-      <div class="dsoa-ad__card">
-        <a class="dsoa-ad__image-link"
-           href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
-           target="_blank" rel="noopener noreferrer">
-          <img src="https://www.dontsleeponai.com/obsidian-claude-code-hero.jpg"
-               alt="Build Your Obsidian Second Brain course" />
-        </a>
-        <div class="dsoa-ad__body">
-          <h3>Give Claude permanent memory.</h3>
-          <p>Build a Second Brain for Claude in less than 30 minutes by giving Claude 3 simple installation commands.</p>
-          <a class="dsoa-ad__cta"
-             href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
-             target="_blank" rel="noopener noreferrer">Install your Second Brain now →</a>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <!-- 9. Footer -->
+  <!-- Footer -->
   <footer class="site-footer">
-    Get more AI tips, tricks and inspiration from
-    <a href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
-       target="_blank" rel="noopener noreferrer">Don't Sleep On AI.com</a>
+    <span id="footer-line">Project Dashboard</span>
   </footer>
 
   <script src="/app.js"></script>

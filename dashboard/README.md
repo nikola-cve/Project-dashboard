@@ -115,10 +115,19 @@ If a source is missing, that card shows "no data yet" — the page never breaks.
 
 ---
 
+## The one write action (the Kanban board)
+
+The dashboard is read-only with a single exception: the **Board** card lets you
+drag a task between **Not started / In progress / Done**. Dropping a card writes
+the new status (and, for Done, today's date) into that task's row in `TASKS.md`
+and nothing else — written atomically (temp file + rename). It never commits,
+pushes, deletes, or touches any other file. If you want it fully read-only,
+don't drag cards (or remove the `do_POST` handler in `server.py`).
+
 ## What it explicitly does NOT do
 
-- **No writes.** It never creates, edits, deletes, moves, commits, or pushes
-  anything. Observation only — there are no action buttons.
+- **No writes other than the task-status change above.** It never creates,
+  deletes, moves, commits, or pushes anything.
 - **No network**, except your browser loading the one Obsidian course thumbnail
   in the promo card. The server itself makes no outbound requests.
 - **No analytics, telemetry, or tracking pixels.** The UTM parameters in the
