@@ -36,10 +36,14 @@ python3 dashboard/server.py
       file count. Commit id appears only on hover.
 - [ ] **Not yet saved (right)**: lists your actual uncommitted changes grouped
       by directory, with commit-hygiene suggestions specific to that diff.
-- [ ] **Board** shows your tasks in three columns (Not started / In progress /
-      Done) with the right counts. Drag a card to another column → the `TASKS.md`
-      row's status updates on disk, the hero % recomputes within a refresh, and
-      "Saved ✓" appears. Moving to Done stamps today's date.
+- [ ] **Tiles** (In progress / Blocked / Due soon / Overdue / Done %) show the
+      right counts; tapping one filters the board.
+- [ ] **Board** shows tasks in three columns with priority dots, due chips
+      (red overdue / amber soon), labels, and assignee initials. Drag a card to
+      another column → `TASKS.md` updates and "Saved ✓" appears.
+- [ ] **Tap a card** → editor opens; change priority/due/assignee/labels/status,
+      Save → only that `TASKS.md` row changes.
+- [ ] **Search / filters / Group by phase** narrow the visible cards.
 - [ ] **Footer** shows a neutral "Project Dashboard · updated …" line (no ad).
 
 ## Resilience checks

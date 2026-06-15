@@ -117,12 +117,13 @@ If a source is missing, that card shows "no data yet" — the page never breaks.
 
 ## The one write action (the Kanban board)
 
-The dashboard is read-only with a single exception: the **Board** card lets you
-drag a task between **Not started / In progress / Done**. Dropping a card writes
-the new status (and, for Done, today's date) into that task's row in `TASKS.md`
-and nothing else — written atomically (temp file + rename). It never commits,
-pushes, deletes, or touches any other file. If you want it fully read-only,
-don't drag cards (or remove the `do_POST` handler in `server.py`).
+The dashboard is read-only with a single exception: the **Board** lets you
+manage tasks. Drag a card between **Not started / In progress / Done**, or tap a
+card to edit its status, priority, due date, assignee, and labels. Saving writes
+those cells into that task's row in `TASKS.md` (and, for Done, today's date) —
+written atomically (temp file + rename), one row at a time, nothing else. It
+never commits, pushes, deletes, or touches any other file. To keep it fully
+read-only, don't edit cards (or remove the `do_POST` handler in `server.py`).
 
 ## What it explicitly does NOT do
 

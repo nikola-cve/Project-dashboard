@@ -272,14 +272,64 @@ def _fmt_hours(hours: float | None) -> str:
     return f"~{hours:.0f}h" if hours >= 1 else f"~{round(hours * 60)}m"
 
 
+# Header label -> canonical field name (header-driven columns).
+HEADER_ALIASES = {
+    "id": "id", "title": "title", "task": "title", "name": "title",
+    "phase": "phase", "status": "status", "state": "status",
+    "est": "est", "estimate": "est", "est_hours": "est", "hours": "est",
+    "done_on": "done_on", "done": "done_on", "completed": "done_on", "completed_on": "done_on",
+    "priority": "priority", "prio": "priority", "p": "priority",
+    "due": "due", "due_date": "due", "deadline": "due",
+    "assignee": "assignee", "owner": "assignee", "who": "assignee", "assigned": "assignee",
+    "labels": "labels", "label": "labels", "tags": "labels", "tag": "labels",
+    "notes": "notes", "note": "notes",
+}
+DEFAULT_COLS = {"id": 0, "title": 1, "phase": 2, "status": 3, "est": 4, "done_on": 5, "notes": 6}
+
+
+def _normalize_priority(raw: str) -> str | None:
+    k = (raw or "").strip().lower()
+    if k in ("high", "h", "p1", "urgent", "1"):
+        return "high"
+    if k in ("medium", "med", "m", "p2", "normal", "2"):
+        return "medium"
+    if k in ("low", "l", "p3", "3"):
+        return "low"
+    return None
+
+
+def _parse_labels(raw: str) -> list[str]:
+    return [s.strip() for s in (raw or "").split(",") if s.strip()]
+
+
+def _header_cols(cells: list[str]) -> dict:
+    cols: dict[str, int] = {}
+    for i, h in enumerate(cells):
+        c = HEADER_ALIASES.get(h.lower().replace(" ", "_"))
+        if c and c not in cols:
+            cols[c] = i
+    if "id" not in cols:
+        cols["id"] = 0
+    return cols
+
+
+def _cell(cells: list[str], cols: dict, name: str) -> str:
+    i = cols.get(name)
+    if i is None or i >= len(cells):
+        return ""
+    return cells[i]
+
+
 def parse_tasks(text: str) -> dict:
     """Parse the TASKS.md content into phases + tasks. Raises on malformed input.
 
+    Columns are matched by header name, so order/extra columns are tolerated.
     Returns a dict: {"phases": [...], "source": "TASKS.md"}.
     """
     phases: list[dict] = []
     phase_by_id: dict[str, dict] = {}
     current_phase_id: str | None = None
+    cols = dict(DEFAULT_COLS)
 
     for raw_line in text.splitlines():
         line = raw_line.rstrip()
@@ -305,25 +355,29 @@ def parse_tasks(text: str) -> dict:
 
         if line.startswith("|"):
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if len(cells) < 4:
+            if len(cells) < 2:
                 continue
-            # Skip every table's header row and its |---|---| separator row.
+            # A header row redefines the column map for following rows.
             if cells[0].lower() == "id":
+                cols = _header_cols(cells)
                 continue
             if all(set(c) <= {"-", ":"} for c in cells if c):
                 continue
-            tid, title, phase_ref, status = cells[0], cells[1], cells[2], cells[3]
-            est = cells[4] if len(cells) > 4 else ""
-            done_on = cells[5] if len(cells) > 5 else ""
-            notes = cells[6] if len(cells) > 6 else ""
+            if not _cell(cells, cols, "title"):
+                continue
+            phase_ref = _cell(cells, cols, "phase")
             task = {
-                "id": tid,
-                "title": title,
+                "id": _cell(cells, cols, "id"),
+                "title": _cell(cells, cols, "title"),
                 "phase_ref": phase_ref,
-                "status": _normalize_status(status),
-                "est_hours": _parse_est_hours(est),
-                "done_on": done_on or None,
-                "notes": notes or None,
+                "status": _normalize_status(_cell(cells, cols, "status")),
+                "est_hours": _parse_est_hours(_cell(cells, cols, "est")),
+                "done_on": _cell(cells, cols, "done_on") or None,
+                "priority": _normalize_priority(_cell(cells, cols, "priority")),
+                "due": _cell(cells, cols, "due") or None,
+                "assignee": _cell(cells, cols, "assignee") or None,
+                "labels": _parse_labels(_cell(cells, cols, "labels")),
+                "notes": _cell(cells, cols, "notes") or None,
             }
             target = phase_by_id.get(phase_ref)
             if target is None:
@@ -490,6 +544,8 @@ def build_phases(task_data: dict | None, reviews: list[str]) -> dict:
                 "id": t["id"], "title": t["title"], "status": t["status"],
                 "column": col, "phase_id": p["id"], "phase_name": p["name"],
                 "in_next_phase": p["id"] == next_id,
+                "priority": t.get("priority"), "due": t.get("due"),
+                "assignee": t.get("assignee"), "labels": t.get("labels", []),
             })
 
     # Plain-English overall summary.
@@ -816,29 +872,63 @@ def _today_local() -> str:
     return datetime.now(timezone.utc).astimezone(_tz()).strftime("%Y-%m-%d")
 
 
-def set_task_status(text: str, task_id: str, status: str, today: str) -> str:
-    """Rewrite one task's status (and done_on) in TASKS.md text. Raises if the
-    id isn't found. Only the matched row changes."""
-    if status not in ("done", "in-progress", "not-started"):
-        raise ValueError("invalid status")
+def _column_map(lines: list[str]) -> tuple[dict, int]:
+    """Find the table header row and return (column map, column count)."""
+    for line in lines:
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cells and cells[0].lower() == "id":
+            return _header_cols(cells), len(cells)
+    return dict(DEFAULT_COLS), 7
+
+
+def set_task_fields(text: str, task_id: str, fields: dict, today: str) -> str:
+    """Update one task's fields in TASKS.md text. Only columns that exist are
+    written. Raises if the id isn't found."""
     lines = text.split("\n")
+    cols, width = _column_map(lines)
+
+    wanted: dict[str, str] = {}
+    if "status" in fields:
+        if fields["status"] not in ("done", "in-progress", "not-started"):
+            raise ValueError("invalid status")
+        wanted["status"] = fields["status"]
+        if "done_on" in cols:
+            wanted["done_on"] = today if fields["status"] == "done" else ""
+    if "priority" in fields:
+        wanted["priority"] = _normalize_priority(fields["priority"]) or ""
+    if "due" in fields:
+        wanted["due"] = (fields["due"] or "").strip()
+    if "assignee" in fields:
+        wanted["assignee"] = (fields["assignee"] or "").strip()
+    if "labels" in fields:
+        labels = fields["labels"]
+        wanted["labels"] = ", ".join(labels) if isinstance(labels, list) else (labels or "").strip()
+
     changed = False
     for i, line in enumerate(lines):
         if not line.startswith("|"):
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) < 4:
+        if len(cells) < 2:
             continue
         if cells[0].lower() == "id":
             continue
         if all(set(c) <= {"-", ":"} for c in cells if c):
             continue
-        if cells[0] != str(task_id):
+        id_idx = cols.get("id", 0)
+        if (cells[id_idx] if id_idx < len(cells) else "") != str(task_id):
             continue
-        while len(cells) < 7:
+        while len(cells) < width:
             cells.append("")
-        cells[3] = status
-        cells[5] = (cells[5] or today) if status == "done" else ""
+        for field, value in wanted.items():
+            idx = cols.get(field)
+            if idx is None:
+                continue
+            if field == "done_on" and value and cells[idx]:
+                continue  # keep an existing completion date
+            cells[idx] = value
         lines[i] = "| " + " | ".join(cells) + " |"
         changed = True
         break
@@ -847,11 +937,11 @@ def set_task_status(text: str, task_id: str, status: str, today: str) -> str:
     return "\n".join(lines)
 
 
-def write_task_status(task_id: str, status: str) -> None:
-    """Read TASKS.md, apply the status change, and write it back atomically."""
+def write_task_fields(task_id: str, fields: dict) -> None:
+    """Read TASKS.md, apply the field changes, and write it back atomically."""
     path = PROJECT_ROOT / "TASKS.md"
     text = path.read_text(encoding="utf-8", errors="replace")
-    updated = set_task_status(text, task_id, status, _today_local())
+    updated = set_task_fields(text, task_id, fields, _today_local())
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(updated, encoding="utf-8")
     os.replace(tmp, path)
@@ -921,7 +1011,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802
         path = self.path.split("?", 1)[0]
-        if path != "/api/task-status":
+        if path not in ("/api/task-update", "/api/task-status"):
             self._send_bytes(b"not found", "text/plain; charset=utf-8", code=404)
             return
         try:
@@ -933,9 +1023,22 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         task_id = str(payload.get("id", "")).strip()
-        status = str(payload.get("status", "")).strip()
-        if not task_id or status not in ("done", "in-progress", "not-started"):
-            self._send_bytes(json.dumps({"error": "Provide a task id and a valid status."}).encode(),
+        if not task_id:
+            self._send_bytes(json.dumps({"error": "Provide a task id."}).encode(),
+                             _CONTENT_TYPES[".json"], code=400)
+            return
+
+        # Collect the fields to change.
+        fields: dict = {}
+        for f in ("status", "priority", "due", "assignee", "labels"):
+            if f in payload:
+                fields[f] = payload[f]
+        if "status" in fields and fields["status"] not in ("done", "in-progress", "not-started"):
+            self._send_bytes(json.dumps({"error": "Invalid status."}).encode(),
+                             _CONTENT_TYPES[".json"], code=400)
+            return
+        if not fields:
+            self._send_bytes(json.dumps({"error": "No fields to update."}).encode(),
                              _CONTENT_TYPES[".json"], code=400)
             return
         if not (PROJECT_ROOT / "TASKS.md").exists():
@@ -943,7 +1046,7 @@ class Handler(BaseHTTPRequestHandler):
                              _CONTENT_TYPES[".json"], code=400)
             return
         try:
-            write_task_status(task_id, status)
+            write_task_fields(task_id, fields)
         except ValueError as exc:
             self._send_bytes(json.dumps({"error": str(exc)}).encode(),
                              _CONTENT_TYPES[".json"], code=404)

@@ -51,29 +51,68 @@
       </div>
     </section>
 
+    <!-- Mission Control: tiles -->
+    <section class="card tiles-card" aria-label="Mission control">
+      <div class="tiles" id="tiles">
+        <button class="tile" type="button" data-tile="in-progress"><span class="tile-n" id="tile-prog">0</span><span class="tile-l">In progress</span></button>
+        <button class="tile" type="button" data-tile="blocked"><span class="tile-n" id="tile-blocked">0</span><span class="tile-l">Blocked</span></button>
+        <button class="tile" type="button" data-tile="due-soon"><span class="tile-n" id="tile-soon">0</span><span class="tile-l">Due soon</span></button>
+        <button class="tile" type="button" data-tile="overdue"><span class="tile-n" id="tile-overdue">0</span><span class="tile-l">Overdue</span></button>
+        <button class="tile" type="button" data-tile="done"><span class="tile-n" id="tile-done">0%</span><span class="tile-l">Done</span></button>
+      </div>
+    </section>
+
     <!-- Board (interactive Kanban) -->
     <section class="card" aria-labelledby="board-h">
       <div class="card-head">
         <h2 id="board-h">Board</h2>
-        <span class="card-hint" id="board-hint">Drag a card to change its status.</span>
+        <span class="card-hint" id="board-hint">Tap a card to edit · drag to change status.</span>
       </div>
-      <div id="board" class="board" aria-live="polite">
-        <div class="board-col" data-col="not-started">
-          <h3 class="board-col-title">Not started <span class="col-count" id="count-not-started">0</span></h3>
-          <div class="board-drop" data-col="not-started"></div>
-        </div>
-        <div class="board-col" data-col="in-progress">
-          <h3 class="board-col-title">In progress <span class="col-count" id="count-in-progress">0</span></h3>
-          <div class="board-drop" data-col="in-progress"></div>
-        </div>
-        <div class="board-col" data-col="done">
-          <h3 class="board-col-title">Done <span class="col-count" id="count-done">0</span></h3>
-          <div class="board-drop" data-col="done"></div>
-        </div>
+      <div class="board-tools" id="board-tools">
+        <input id="search" class="board-search" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
+        <select id="f-phase" aria-label="Filter by phase"><option value="">All phases</option></select>
+        <select id="f-priority" aria-label="Filter by priority"><option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        <select id="f-assignee" aria-label="Filter by assignee"><option value="">Anyone</option></select>
+        <select id="f-label" aria-label="Filter by label"><option value="">Any label</option></select>
+        <label class="toggle"><input type="checkbox" id="f-group" /> Group by phase</label>
+        <button id="f-clear" class="link-btn" type="button">Clear</button>
       </div>
-      <p id="board-empty" class="empty" hidden>No tasks yet — add a TASKS.md.</p>
+      <div id="board" class="board-wrap" aria-live="polite"></div>
+      <p id="board-empty" class="empty" hidden>No tasks match — add a TASKS.md or clear filters.</p>
       <p id="board-msg" class="board-msg" hidden></p>
     </section>
+
+    <!-- Task editor (bottom sheet) -->
+    <div id="editor-backdrop" class="sheet-backdrop" hidden></div>
+    <div id="editor" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="editor-title">
+      <div class="sheet-head">
+        <h3 id="editor-title">Edit task</h3>
+        <button id="editor-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <p id="editor-task" class="muted"></p>
+        <label class="field">Status
+          <select id="e-status"><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="done">Done</option></select>
+        </label>
+        <label class="field">Priority
+          <select id="e-priority"><option value="">—</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        </label>
+        <label class="field">Due date
+          <input id="e-due" type="date" />
+        </label>
+        <label class="field">Assignee
+          <input id="e-assignee" type="text" placeholder="name" />
+        </label>
+        <label class="field">Labels
+          <input id="e-labels" type="text" placeholder="comma, separated" />
+        </label>
+        <p id="editor-msg" class="board-msg" hidden></p>
+      </div>
+      <div class="sheet-foot">
+        <button id="editor-cancel" class="link-btn" type="button">Cancel</button>
+        <button id="editor-save" class="primary-btn" type="button">Save</button>
+      </div>
+    </div>
 
     <!-- Progress over time (burndown) -->
     <section class="card" aria-labelledby="history-h">

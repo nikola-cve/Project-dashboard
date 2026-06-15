@@ -6,10 +6,12 @@ your project state from **GitHub** at request time, and is protected by a
 server of your own required.
 
 This cloud version shows everything that lives on GitHub: completion %, phases,
-an **interactive Kanban board** (drag a card to change a task's status — it
-commits the change to `TASKS.md`), a **burndown / progress-over-time** chart,
-**open pull requests with CI status**, today's work, recent commits, and an
-optional **multi-project switcher**. The local Python dashboard in `dashboard/`
+a **mission-control board** — task cards with priority, due date, assignee, and
+labels that you **edit right from the dashboard** (tap a card, or drag to change
+status; changes commit to `TASKS.md`), with **stat tiles**, **search/filter**,
+and **group-by-phase** — plus a **burndown** chart, **open pull requests with CI
+status**, today's work, recent commits, and an optional **multi-project
+switcher**. On a phone the board's columns **swipe** left/right. The local Python dashboard in `dashboard/`
 additionally shows live "right now" activity and uncommitted changes, which a
 cloud app cannot see.
 
@@ -20,7 +22,7 @@ cloud app cannot see.
 | `api/login.js` | Checks your password, sets a signed login cookie. |
 | `api/logout.js` | Clears the login cookie. |
 | `api/state.js` | Auth-gated. Reads GitHub and returns the project state JSON (incl. board tasks + open PRs). |
-| `api/task-move.js` | Auth-gated. The board's write action: commits a task-status change to `TASKS.md`. |
+| `api/task-update.js` | Auth-gated. The board's write action: commits a task's field changes (status/priority/due/assignee/labels) to `TASKS.md`. |
 | `api/history.js` | Auth-gated. Returns the completion-%-over-time series for the burndown chart. |
 | `lib/tasks.js` | Parses `TASKS.md` and computes the completion view (JS port of the local server). |
 | `lib/github.js` | Reads `TASKS.md`, commits, and review docs from the GitHub API. |
