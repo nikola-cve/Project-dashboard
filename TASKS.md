@@ -24,7 +24,7 @@ Each phase can have a one-line intent after `### Phase N — Name` using a
 
 | id  | title                                            | phase | status      | est | done_on    | notes |
 |-----|--------------------------------------------------|-------|-------------|-----|------------|-------|
-| 1.1 | Stdlib HTTP server bound to 127.0.0.1 | 1 | in-progress | 2h |  | Read-only, no caching, serves /api/state + static files |
+| 1.1 | Stdlib HTTP server bound to 127.0.0.1 | 1 | done | 2h | 2026-06-16 | Read-only, no caching, serves /api/state + static files |
 | 1.2 | Git helpers (log, status, branches, file counts) | 1     | done        | 2h  | 2026-06-15 | All wrapped to degrade gracefully when git is absent |
 | 1.3 | TASKS.md parser with last-good-snapshot fallback | 1     | done        | 2h  | 2026-06-15 | Tolerates mid-write reads |
 | 1.4 | Phase aggregation + overall percentage           | 1     | done        | 1h  | 2026-06-15 | Computes done / in-progress / not-started buckets |
