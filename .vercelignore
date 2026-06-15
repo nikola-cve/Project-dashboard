@@ -1,0 +1,7 @@
+# Keep the deployment to just the cloud app. The local Python dashboard, the
+# task board, and all markdown stay out of the public deployment — the cloud
+# app reads TASKS.md from GitHub at runtime (behind login), never as a static file.
+.git
+dashboard
+*.md
+.claude

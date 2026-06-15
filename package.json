@@ -1,0 +1,7 @@
+{
+  "name": "project-dashboard-cloud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud (Vercel) variant of the project dashboard — reads project state from GitHub, behind a login.",
+  "engines": { "node": ">=18" }
+}
