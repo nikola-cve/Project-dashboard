@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Project Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- 1. Header -->
+  <header class="site-header" aria-label="Project header">
+    <div class="header-left">
+      <h1 id="project-name" class="project-name">Loading…</h1>
+      <button id="project-root" class="project-root" type="button"
+              title="Click to copy the project folder path"
+              aria-label="Project folder path, click to copy">—</button>
+    </div>
+    <div class="header-right">
+      <span id="state-badge" class="badge badge--unknown" role="status"
+            aria-label="Project state">UNKNOWN</span>
+      <span id="last-refresh" class="last-refresh" aria-live="polite">
+        Last updated —
+      </span>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 2. Hero -->
+    <section class="hero card" aria-label="Overall completion">
+      <div class="hero-number-wrap">
+        <div id="hero-percent" class="hero-percent">—</div>
+        <div id="hero-summary" class="hero-summary">Reading project state…</div>
+      </div>
+      <div class="hero-graph">
+        <div class="remaining-bar" id="remaining-bar"
+             role="img" aria-label="Remaining work breakdown">
+          <div class="seg seg--done" id="seg-done"></div>
+          <div class="seg seg--prog" id="seg-prog"></div>
+          <div class="seg seg--todo" id="seg-todo"></div>
+        </div>
+        <ul class="legend" aria-hidden="false">
+          <li><span class="dot dot--done"></span> Done <b id="leg-done">0</b></li>
+          <li><span class="dot dot--prog"></span> In progress <b id="leg-prog">0</b></li>
+          <li><span class="dot dot--todo"></span> Not started <b id="leg-todo">0</b></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. What's left -->
+    <section class="card" aria-labelledby="left-h">
+      <h2 id="left-h">What's left to do</h2>
+      <div id="phases-left" class="phase-list">
+        <p class="empty">No data yet.</p>
+      </div>
+    </section>
+
+    <!-- 4. What's done -->
+    <section class="card" aria-labelledby="done-h">
+      <h2 id="done-h">What's done</h2>
+      <div id="phases-done" class="phase-list done-list">
+        <p class="empty">No data yet.</p>
+      </div>
+    </section>
+
+    <!-- 5. Today's completed work -->
+    <section class="card" aria-labelledby="today-h">
+      <h2 id="today-h">Today's completed work</h2>
+      <p id="today-headline" class="today-headline">—</p>
+      <ul id="today-list" class="plain-list"></ul>
+    </section>
+
+    <!-- 6. Right now -->
+    <section class="card" aria-labelledby="now-h">
+      <h2 id="now-h">Right now</h2>
+      <p id="right-now" class="right-now">—</p>
+    </section>
+
+    <!-- 7. Commits -->
+    <section class="card" aria-labelledby="commits-h">
+      <h2 id="commits-h">Commits — what's saved, what's not</h2>
+      <div class="commits-grid">
+        <div class="commits-col">
+          <h3>Recent saves</h3>
+          <ul id="commit-list" class="commit-list"></ul>
+          <p id="commit-gap" class="muted">—</p>
+        </div>
+        <div class="commits-col">
+          <h3>Not yet saved</h3>
+          <div id="uncommitted" class="uncommitted">
+            <p class="empty">Everything's saved.</p>
+          </div>
+          <div id="hygiene" class="hygiene"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Don't Sleep On AI ad block -->
+    <section class="dsoa-ad" aria-label="Don't Sleep On AI">
+      <p class="dsoa-ad__header">
+        This dashboard built by
+        <a href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
+           target="_blank" rel="noopener noreferrer">Don't Sleep On AI.com</a>
+      </p>
+      <div class="dsoa-ad__card">
+        <a class="dsoa-ad__image-link"
+           href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
+           target="_blank" rel="noopener noreferrer">
+          <img src="https://www.dontsleeponai.com/obsidian-claude-code-hero.jpg"
+               alt="Build Your Obsidian Second Brain course" />
+        </a>
+        <div class="dsoa-ad__body">
+          <h3>Give Claude permanent memory.</h3>
+          <p>Build a Second Brain for Claude in less than 30 minutes by giving Claude 3 simple installation commands.</p>
+          <a class="dsoa-ad__cta"
+             href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
+             target="_blank" rel="noopener noreferrer">Install your Second Brain now →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 9. Footer -->
+  <footer class="site-footer">
+    Get more AI tips, tricks and inspiration from
+    <a href="https://www.dontsleeponai.com/courses/build-your-obsidian-second-brain?utm_source=project_dashboard&utm_medium=embedded_card&utm_campaign=second_brain&utm_content=dashboard_footer"
+       target="_blank" rel="noopener noreferrer">Don't Sleep On AI.com</a>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
