@@ -28,7 +28,7 @@ Each phase can have a one-line intent after `### Phase N — Name` using a
 | 1.2 | Git helpers (log, status, branches, file counts) | 1     | done        | 2h  | 2026-06-15 | All wrapped to degrade gracefully when git is absent |
 | 1.3 | TASKS.md parser with last-good-snapshot fallback | 1 | in-progress | 2h |  | Tolerates mid-write reads |
 | 1.4 | Phase aggregation + overall percentage           | 1     | done        | 1h  | 2026-06-15 | Computes done / in-progress / not-started buckets |
-| 1.5 | Commit-hygiene + "tackle this next" heuristics | 1 | not-started | 2h |  | Suggestions derived from the real diff |
+| 1.5 | Commit-hygiene + "tackle this next" heuristics | 1 | done | 2h | 2026-06-16 | Suggestions derived from the real diff |
 
 ### Phase 2 — Frontend cards
 > intent: A plain-English, light-minimal web UI that renders the nine fixed dashboard sections top to bottom and polls every 2 seconds.
