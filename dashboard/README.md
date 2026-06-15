@@ -46,6 +46,45 @@ environment. The server is a plain long-running process; any supervisor works.
 
 ---
 
+## Remote access from your phone (Tailscale)
+
+The dashboard stays bound to `127.0.0.1` — it is never exposed to the public
+internet. To reach it from your phone or another device, put both devices on
+your private Tailscale network and proxy the local port over HTTPS within that
+network. No code changes; nothing leaves your machine to the public internet.
+
+1. Install Tailscale on the computer running the dashboard and on your phone
+   (https://tailscale.com/download), and sign in with the **same account** on
+   both — now they share a private network.
+2. Start the dashboard normally: `python3 dashboard/server.py`
+   (it stays on `127.0.0.1:4747`).
+3. Expose it to your own tailnet only:
+
+   ```bash
+   tailscale serve --bg 4747
+   ```
+
+4. Get the private HTTPS URL and open it on your phone (the phone must be
+   connected to Tailscale):
+
+   ```bash
+   tailscale serve status
+   # e.g. https://your-computer.your-tailnet.ts.net/
+   ```
+
+> ⚠️ Do **not** use `tailscale funnel` — that publishes the dashboard to the
+> public internet. Stay on `tailscale serve`, which keeps it private to your
+> devices. Because only your own tailnet can reach it, no login is needed.
+
+**Alternative — SSH tunnel** (handier from another laptop than from a phone):
+
+```bash
+ssh -L 4747:127.0.0.1:4747 user@your-computer
+# then open http://127.0.0.1:4747 locally
+```
+
+---
+
 ## Configuration (environment variables)
 
 | Variable         | Default                       | Meaning |
