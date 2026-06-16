@@ -1,0 +1,26 @@
+{
+  "updated": "2026-06-16T00:00:00Z",
+  "risks": [
+    {
+      "id": "R1",
+      "title": "Write token scope",
+      "severity": "medium",
+      "status": "mitigated",
+      "notes": "The cloud board commits to TASKS.md, so the GitHub token needs write access. Scoped to this repo only; stored as a Vercel secret."
+    },
+    {
+      "id": "R2",
+      "title": "GitHub API rate limits",
+      "severity": "low",
+      "status": "mitigated",
+      "notes": "Only the active tab polls; a token raises the limit to 5,000/hour."
+    },
+    {
+      "id": "R3",
+      "title": "Memory only as good as the habit",
+      "severity": "medium",
+      "status": "open",
+      "notes": "The second-brain value depends on sessions/handoffs actually being written each session (see CLAUDE.md checklist)."
+    }
+  ]
+}

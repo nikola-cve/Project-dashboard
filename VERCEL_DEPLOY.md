@@ -24,6 +24,13 @@ cloud app cannot see.
 | `api/state.js` | Auth-gated. Reads GitHub and returns the project state JSON (incl. board tasks + open PRs). |
 | `api/task-update.js` | Auth-gated. The board's write action: commits a task's field changes (status/priority/due/assignee/labels) to `TASKS.md`. |
 | `api/history.js` | Auth-gated. Returns the completion-%-over-time series for the burndown chart. |
+| `api/overview.js` | Auth-gated. Condensed mission-control summary for the Overview tab (KPIs, alerts, last session, next handoff, deploy, agents). |
+| `api/memory.js` | Auth-gated. Lists/renders the `memory/` markdown (sessions, handoffs, decisions, plans, prds). |
+| `api/activity.js` | Auth-gated. Unified activity feed (commits, task moves, PRs, deploys). |
+| `api/risk.js` | Auth-gated. Risk register + blockers + CI/test status (GitHub Actions). |
+| `api/ops.js` | Auth-gated. Deployments, releases/tags, and agent/loop status. |
+| `api/fleet.js` | Auth-gated. One-line summary of every configured project. |
+| `lib/md.js` | Dependency-free, safe Markdown→HTML renderer (HTML escaped first). |
 | `lib/tasks.js` | Parses `TASKS.md` and computes the completion view (JS port of the local server). |
 | `lib/github.js` | Reads `TASKS.md`, commits, and review docs from the GitHub API. |
 | `lib/auth.js` | Signed-cookie login (Node crypto, no dependencies). |
@@ -38,7 +45,9 @@ cloud app cannot see.
 | `DASH_PASSWORD` | ✅ | The password you'll type on the login page. Choose anything. |
 | `DASH_SECRET` | ✅ | A random string used to sign the login cookie. Use the value Claude gave you in chat (or any long random string). |
 | `GITHUB_TOKEN` | required for the board | A GitHub personal access token. Two things depend on it: (1) **rate limits** — un-authenticated reads are capped at 60/hour, a token raises that to 5,000/hour; (2) the **interactive Kanban** — dragging a card commits a change to `TASKS.md`, which needs **write** access. Use a classic token with the **`public_repo`** scope (or a fine-grained token with **Contents: read & write** on this repo). Without a write-scoped token the board is read-only and everything else still works. |
-| `DASH_PROJECTS` | optional | JSON array to monitor several repos with a project switcher, e.g. `[{"owner":"nikola-cve","repo":"Project-dashboard","branch":"main","label":"Dashboard"},{"owner":"nikola-cve","repo":"other","branch":"main","label":"Other"}]`. Unset = the single repo below. |
+| `DASH_PROJECTS` | optional | JSON array to monitor several repos with a project switcher, e.g. `[{"owner":"nikola-cve","repo":"Project-dashboard","branch":"main","label":"Dashboard"},{"owner":"nikola-cve","repo":"other","branch":"main","label":"Other"}]`. Unset = the single repo below. Powers the **Fleet** tab. |
+| `DASH_MEMORY` | optional | JSON to override where the **Memory** tab looks, e.g. `{"sessions":"memory/sessions","handoffs":"memory/handoffs","decisions":"memory/decisions","plans":"Plans","prds":"PRDs","agents":"memory/agents.json","risk":"RISK.json"}`. Defaults shown. |
+| `DASH_TITLE` | optional | Header title override (default = project name). |
 | `GH_OWNER` | optional | Defaults to `nikola-cve`. |
 | `GH_REPO` | optional | Defaults to `Project-dashboard`. |
 | `GH_BRANCH` | optional | Defaults to `main`. Set to your working branch if you want to track that instead. |

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
-  <title>Project Dashboard</title>
+  <title>Command Center</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -14,8 +14,7 @@
   <header class="site-header" aria-label="Project header">
     <div class="header-left">
       <h1 id="project-name" class="project-name">Loading…</h1>
-      <button id="project-root" class="project-root" type="button"
-              title="Click to copy" aria-label="Project, click to copy">—</button>
+      <button id="project-root" class="project-root" type="button" title="Click to copy" aria-label="Project, click to copy">—</button>
     </div>
     <div class="header-right">
       <label id="project-switch-wrap" class="project-switch" hidden>
@@ -23,157 +22,150 @@
         <select id="project-switch" aria-label="Switch project"></select>
       </label>
       <span id="state-badge" class="badge badge--unknown" role="status" aria-label="Project state">UNKNOWN</span>
-      <span id="last-refresh" class="last-refresh" aria-live="polite">Last updated —</span>
+      <button id="bell" class="bell-btn" type="button" aria-label="Alerts" title="Alerts">🔔<span id="bell-count" class="bell-count" hidden>0</span></button>
+      <span id="last-refresh" class="last-refresh" aria-live="polite">—</span>
       <button id="logout" class="logout-btn" type="button">Sign out</button>
     </div>
   </header>
 
+  <!-- Tab nav -->
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button class="tab" data-tab="overview" aria-current="true">Overview</button>
+    <button class="tab" data-tab="board">Board</button>
+    <button class="tab" data-tab="memory">Memory</button>
+    <button class="tab" data-tab="activity">Activity</button>
+    <button class="tab" data-tab="risk">Risk</button>
+    <button class="tab" data-tab="fleet">Fleet</button>
+  </nav>
+
   <main id="main">
     <p id="soft-error" class="soft-error" hidden></p>
 
-    <!-- Hero -->
-    <section class="hero card" aria-label="Overall completion">
-      <div class="hero-number-wrap">
-        <div id="hero-percent" class="hero-percent">—</div>
-        <div id="hero-summary" class="hero-summary">Reading project state…</div>
-      </div>
-      <div class="hero-graph">
-        <div class="remaining-bar" id="remaining-bar" role="img" aria-label="Remaining work breakdown">
-          <div class="seg seg--done" id="seg-done"></div>
-          <div class="seg seg--prog" id="seg-prog"></div>
-          <div class="seg seg--todo" id="seg-todo"></div>
+    <!-- ===== Overview ===== -->
+    <section class="tabpanel" id="tab-overview">
+      <div id="ov-alerts" class="alerts" hidden></div>
+
+      <section class="card tiles-card">
+        <div class="tiles">
+          <div class="tile static"><span class="tile-n" id="ov-done">—</span><span class="tile-l">Done</span></div>
+          <div class="tile static"><span class="tile-n" id="ov-prog">0</span><span class="tile-l">In progress</span></div>
+          <div class="tile static"><span class="tile-n" id="ov-blocked">0</span><span class="tile-l">Blocked</span></div>
+          <div class="tile static"><span class="tile-n" id="ov-overdue">0</span><span class="tile-l">Overdue</span></div>
+          <div class="tile static"><span class="tile-n" id="ov-prs">0</span><span class="tile-l">Open PRs</span></div>
+          <div class="tile static"><span class="tile-n" id="ov-ci">—</span><span class="tile-l">CI</span></div>
         </div>
-        <ul class="legend">
-          <li><span class="dot dot--done"></span> Done <b id="leg-done">0</b></li>
-          <li><span class="dot dot--prog"></span> In progress <b id="leg-prog">0</b></li>
-          <li><span class="dot dot--todo"></span> Not started <b id="leg-todo">0</b></li>
-        </ul>
+      </section>
+
+      <section class="hero card" aria-label="Overall completion">
+        <div class="hero-number-wrap">
+          <div id="hero-percent" class="hero-percent">—</div>
+          <div id="hero-summary" class="hero-summary">Reading project state…</div>
+        </div>
+        <div class="hero-graph">
+          <div class="remaining-bar" id="remaining-bar" role="img" aria-label="Remaining work">
+            <div class="seg seg--done" id="seg-done"></div>
+            <div class="seg seg--prog" id="seg-prog"></div>
+            <div class="seg seg--todo" id="seg-todo"></div>
+          </div>
+          <ul class="legend">
+            <li><span class="dot dot--done"></span> Done <b id="leg-done">0</b></li>
+            <li><span class="dot dot--prog"></span> In progress <b id="leg-prog">0</b></li>
+            <li><span class="dot dot--todo"></span> Not started <b id="leg-todo">0</b></li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="ov-grid">
+        <section class="card"><h2>Last session</h2><div id="ov-session" class="md">No session logged yet.</div></section>
+        <section class="card"><h2>Next handoff</h2><div id="ov-handoff" class="md">No handoff yet.</div></section>
+      </div>
+
+      <div class="ov-grid">
+        <section class="card"><h2>Ops</h2><div id="ov-ops" class="chips"></div></section>
+        <section class="card"><h2>Recent activity</h2><ul id="ov-recent" class="feed"></ul></section>
+      </div>
+
+      <section class="card"><h2>Progress over time</h2><div id="history-chart" class="history-chart"><p class="empty">Loading…</p></div></section>
+    </section>
+
+    <!-- ===== Board ===== -->
+    <section class="tabpanel" id="tab-board" hidden>
+      <section class="card tiles-card" aria-label="Mission control">
+        <div class="tiles" id="tiles">
+          <button class="tile" type="button" data-tile="in-progress"><span class="tile-n" id="tile-prog">0</span><span class="tile-l">In progress</span></button>
+          <button class="tile" type="button" data-tile="blocked"><span class="tile-n" id="tile-blocked">0</span><span class="tile-l">Blocked</span></button>
+          <button class="tile" type="button" data-tile="due-soon"><span class="tile-n" id="tile-soon">0</span><span class="tile-l">Due soon</span></button>
+          <button class="tile" type="button" data-tile="overdue"><span class="tile-n" id="tile-overdue">0</span><span class="tile-l">Overdue</span></button>
+          <button class="tile" type="button" data-tile="done"><span class="tile-n" id="tile-done">0%</span><span class="tile-l">Done</span></button>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="board-h">
+        <div class="card-head"><h2 id="board-h">Board</h2><span class="card-hint" id="board-hint">Tap a card to edit · drag to change status.</span></div>
+        <div class="board-tools" id="board-tools">
+          <input id="search" class="board-search" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
+          <select id="f-phase" aria-label="Filter by phase"><option value="">All phases</option></select>
+          <select id="f-priority" aria-label="Filter by priority"><option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+          <select id="f-assignee" aria-label="Filter by assignee"><option value="">Anyone</option></select>
+          <select id="f-label" aria-label="Filter by label"><option value="">Any label</option></select>
+          <label class="toggle"><input type="checkbox" id="f-group" /> Group by phase</label>
+          <button id="f-clear" class="link-btn" type="button">Clear</button>
+        </div>
+        <div id="board" class="board-wrap" aria-live="polite"></div>
+        <p id="board-empty" class="empty" hidden>No tasks match — add a TASKS.md or clear filters.</p>
+        <p id="board-msg" class="board-msg" hidden></p>
+      </section>
+    </section>
+
+    <!-- ===== Memory ===== -->
+    <section class="tabpanel" id="tab-memory" hidden>
+      <nav class="subtabs" id="mem-subtabs">
+        <button class="subtab" data-kind="sessions" aria-current="true">Sessions</button>
+        <button class="subtab" data-kind="handoffs">Handoffs</button>
+        <button class="subtab" data-kind="decisions">Decisions</button>
+        <button class="subtab" data-kind="plans">Plans</button>
+        <button class="subtab" data-kind="prds">PRDs</button>
+      </nav>
+      <div class="mem-grid">
+        <section class="card"><h2 id="mem-list-h">Sessions</h2><ul id="mem-list" class="mem-list"><li class="empty">Loading…</li></ul></section>
+        <section class="card"><div class="card-head"><h2 id="mem-reader-h">Reader</h2><a id="mem-gh" class="link-btn" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a></div><div id="mem-reader" class="md"><p class="empty">Pick a note on the left.</p></div></section>
       </div>
     </section>
 
-    <!-- Mission Control: tiles -->
-    <section class="card tiles-card" aria-label="Mission control">
-      <div class="tiles" id="tiles">
-        <button class="tile" type="button" data-tile="in-progress"><span class="tile-n" id="tile-prog">0</span><span class="tile-l">In progress</span></button>
-        <button class="tile" type="button" data-tile="blocked"><span class="tile-n" id="tile-blocked">0</span><span class="tile-l">Blocked</span></button>
-        <button class="tile" type="button" data-tile="due-soon"><span class="tile-n" id="tile-soon">0</span><span class="tile-l">Due soon</span></button>
-        <button class="tile" type="button" data-tile="overdue"><span class="tile-n" id="tile-overdue">0</span><span class="tile-l">Overdue</span></button>
-        <button class="tile" type="button" data-tile="done"><span class="tile-n" id="tile-done">0%</span><span class="tile-l">Done</span></button>
-      </div>
+    <!-- ===== Activity ===== -->
+    <section class="tabpanel" id="tab-activity" hidden>
+      <section class="card"><div class="card-head"><h2>Activity</h2><button id="act-refresh" class="link-btn" type="button">Refresh</button></div><ul id="act-feed" class="feed"><li class="empty">Loading…</li></ul></section>
     </section>
 
-    <!-- Board (interactive Kanban) -->
-    <section class="card" aria-labelledby="board-h">
-      <div class="card-head">
-        <h2 id="board-h">Board</h2>
-        <span class="card-hint" id="board-hint">Tap a card to edit · drag to change status.</span>
-      </div>
-      <div class="board-tools" id="board-tools">
-        <input id="search" class="board-search" type="search" placeholder="Search tasks…" aria-label="Search tasks" />
-        <select id="f-phase" aria-label="Filter by phase"><option value="">All phases</option></select>
-        <select id="f-priority" aria-label="Filter by priority"><option value="">Any priority</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
-        <select id="f-assignee" aria-label="Filter by assignee"><option value="">Anyone</option></select>
-        <select id="f-label" aria-label="Filter by label"><option value="">Any label</option></select>
-        <label class="toggle"><input type="checkbox" id="f-group" /> Group by phase</label>
-        <button id="f-clear" class="link-btn" type="button">Clear</button>
-      </div>
-      <div id="board" class="board-wrap" aria-live="polite"></div>
-      <p id="board-empty" class="empty" hidden>No tasks match — add a TASKS.md or clear filters.</p>
-      <p id="board-msg" class="board-msg" hidden></p>
+    <!-- ===== Risk ===== -->
+    <section class="tabpanel" id="tab-risk" hidden>
+      <section class="card"><h2>CI / test status</h2><ul id="risk-ci" class="feed"><li class="empty">Loading…</li></ul></section>
+      <section class="card"><h2>Blockers</h2><ul id="risk-blockers" class="feed"><li class="empty">—</li></ul></section>
+      <section class="card"><h2>Risk register</h2><div id="risk-register" class="risk-table"><p class="empty">Loading…</p></div></section>
+    </section>
+
+    <!-- ===== Fleet ===== -->
+    <section class="tabpanel" id="tab-fleet" hidden>
+      <section class="card"><div class="card-head"><h2>Fleet</h2><button id="fleet-refresh" class="link-btn" type="button">Refresh</button></div><div id="fleet-grid" class="fleet-grid"><p class="empty">Loading…</p></div></section>
     </section>
 
     <!-- Task editor (bottom sheet) -->
     <div id="editor-backdrop" class="sheet-backdrop" hidden></div>
     <div id="editor" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="editor-title">
-      <div class="sheet-head">
-        <h3 id="editor-title">Edit task</h3>
-        <button id="editor-close" class="icon-btn" type="button" aria-label="Close">✕</button>
-      </div>
+      <div class="sheet-head"><h3 id="editor-title">Edit task</h3><button id="editor-close" class="icon-btn" type="button" aria-label="Close">✕</button></div>
       <div class="sheet-body">
         <p id="editor-task" class="muted"></p>
-        <label class="field">Status
-          <select id="e-status"><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="done">Done</option></select>
-        </label>
-        <label class="field">Priority
-          <select id="e-priority"><option value="">—</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
-        </label>
-        <label class="field">Due date
-          <input id="e-due" type="date" />
-        </label>
-        <label class="field">Assignee
-          <input id="e-assignee" type="text" placeholder="name" />
-        </label>
-        <label class="field">Labels
-          <input id="e-labels" type="text" placeholder="comma, separated" />
-        </label>
+        <label class="field">Status<select id="e-status"><option value="not-started">Not started</option><option value="in-progress">In progress</option><option value="done">Done</option></select></label>
+        <label class="field">Priority<select id="e-priority"><option value="">—</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+        <label class="field">Due date<input id="e-due" type="date" /></label>
+        <label class="field">Assignee<input id="e-assignee" type="text" placeholder="name" /></label>
+        <label class="field">Labels<input id="e-labels" type="text" placeholder="comma, separated" /></label>
         <p id="editor-msg" class="board-msg" hidden></p>
       </div>
-      <div class="sheet-foot">
-        <button id="editor-cancel" class="link-btn" type="button">Cancel</button>
-        <button id="editor-save" class="primary-btn" type="button">Save</button>
-      </div>
+      <div class="sheet-foot"><button id="editor-cancel" class="link-btn" type="button">Cancel</button><button id="editor-save" class="primary-btn" type="button">Save</button></div>
     </div>
-
-    <!-- Progress over time (burndown) -->
-    <section class="card" aria-labelledby="history-h">
-      <h2 id="history-h">Progress over time</h2>
-      <div id="history-chart" class="history-chart"><p class="empty">Loading history…</p></div>
-    </section>
-
-    <!-- What's left -->
-    <section class="card" aria-labelledby="left-h">
-      <h2 id="left-h">What's left to do</h2>
-      <div id="phases-left" class="phase-list"><p class="empty">No data yet.</p></div>
-    </section>
-
-    <!-- What's done -->
-    <section class="card" aria-labelledby="done-h">
-      <h2 id="done-h">What's done</h2>
-      <div id="phases-done" class="phase-list done-list"><p class="empty">No data yet.</p></div>
-    </section>
-
-    <!-- Today's completed work -->
-    <section class="card" aria-labelledby="today-h">
-      <h2 id="today-h">Today's completed work</h2>
-      <p id="today-headline" class="today-headline">—</p>
-      <ul id="today-list" class="plain-list"></ul>
-    </section>
-
-    <!-- Right now -->
-    <section class="card" aria-labelledby="now-h">
-      <h2 id="now-h">Right now</h2>
-      <p id="right-now" class="right-now">—</p>
-    </section>
-
-    <!-- Open pull requests -->
-    <section class="card" aria-labelledby="prs-h">
-      <h2 id="prs-h">Open pull requests</h2>
-      <ul id="pr-list" class="pr-list"><li class="empty">No open pull requests.</li></ul>
-    </section>
-
-    <!-- Commits -->
-    <section class="card" aria-labelledby="commits-h">
-      <h2 id="commits-h">Commits — what's saved</h2>
-      <div class="commits-grid">
-        <div class="commits-col">
-          <h3>Recent saves</h3>
-          <ul id="commit-list" class="commit-list"></ul>
-          <p id="commit-gap" class="muted">—</p>
-        </div>
-        <div class="commits-col">
-          <h3>Not yet saved</h3>
-          <p class="empty cloud-note">Uncommitted changes live only on the machine
-          where you edit, so they're not visible in the cloud version. Everything
-          here reflects what's pushed to GitHub.</p>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <footer class="site-footer">
-    <span id="footer-line">Project Dashboard</span>
-  </footer>
-
+  <footer class="site-footer"><span id="footer-line">Command Center</span></footer>
   <script src="/app.js"></script>
 </body>
 </html>

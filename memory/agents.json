@@ -1,0 +1,12 @@
+{
+  "updated": "2026-06-16T00:00:00Z",
+  "agents": [
+    {
+      "name": "session-logger",
+      "description": "Writes a memory/sessions log at the end of each Claude Code session.",
+      "last_wakeup": "2026-06-16T00:00:00Z",
+      "current_task": "Logged the command-center build session.",
+      "state": "healthy"
+    }
+  ]
+}
